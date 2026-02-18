@@ -1,10 +1,7 @@
-fastapi
-uvicorn[standard]
+streamlit
 chromadb
 sentence-transformers
-torch
-transformers
-datasets
 scikit-learn
-requests
-python-multipart
+pandas
+numpy
+joblib
