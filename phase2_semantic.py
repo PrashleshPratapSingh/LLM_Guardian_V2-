@@ -1,45 +1,24 @@
 import re
-import os
-import tempfile
-import chromadb
-from chromadb.utils import embedding_functions
+import numpy as np
+from sentence_transformers import SentenceTransformer
 
 ATTACKS_FILE = "attacks.txt"
-COLLECTION_NAME = "jailbreak_signatures"
-
-# Use /tmp on cloud (Streamlit Cloud, Linux) or local ./chroma_db otherwise
-CHROMA_PATH = os.path.join(tempfile.gettempdir(), "llmguardian_chroma")
 
 class Phase2Semantic:
     def __init__(self):
-        self.embedding_func = embedding_functions.SentenceTransformerEmbeddingFunction(
-            model_name="all-MiniLM-L6-v2"
-        )
-        self.client = chromadb.PersistentClient(path=CHROMA_PATH)
-
-        existing = [c.name for c in self.client.list_collections()]
-        if COLLECTION_NAME in existing:
-            self.collection = self.client.get_collection(
-                name=COLLECTION_NAME,
-                embedding_function=self.embedding_func
-            )
-        else:
-            self.collection = self.client.create_collection(
-                name=COLLECTION_NAME,
-                embedding_function=self.embedding_func,
-                metadata={"hnsw:space": "cosine"}
-            )
-            self._load_attacks()
-
-        if self.collection.count() == 0:
-            self._load_attacks()
+        self.model = SentenceTransformer("all-MiniLM-L6-v2")
+        self.attacks = []
+        self.attack_embeddings = None
+        self._load_attacks()
 
     def _load_attacks(self):
         with open(ATTACKS_FILE, "r", encoding="utf-8") as f:
-            attacks = [line.strip() for line in f if line.strip()]
-        ids = [f"attack_{i}" for i in range(len(attacks))]
-        self.collection.add(documents=attacks, ids=ids)
-        print(f"[Phase2] Loaded {len(attacks)} attack fingerprints into ChromaDB @ {CHROMA_PATH}")
+            self.attacks = [line.strip() for line in f if line.strip()]
+        # Pre-encode all attack fingerprints once at startup
+        self.attack_embeddings = self.model.encode(
+            self.attacks, normalize_embeddings=True, show_progress_bar=False
+        )
+        print(f"[Phase2] Loaded {len(self.attacks)} attack fingerprints.")
 
     def analyze(self, prompt: str) -> dict:
         subphrases = re.split(r"[.!?;,]", prompt)
@@ -51,17 +30,19 @@ class Phase2Semantic:
         top_match = None
 
         for phrase in subphrases:
-            results = self.collection.query(query_texts=[phrase], n_results=1)
-            if results["distances"] and results["distances"][0]:
-                distance = results["distances"][0][0]
-                similarity = max(0.0, 1.0 - distance)
-                if similarity > max_similarity:
-                    max_similarity = similarity
-                    top_match = {
-                        "phrase": phrase[:60],
-                        "matched": results["documents"][0][0][:60] if results["documents"][0] else "",
-                        "similarity": round(similarity, 3)
-                    }
+            vec = self.model.encode(phrase, normalize_embeddings=True)
+            # dot product of normalized vectors = cosine similarity
+            sims = self.attack_embeddings @ vec
+            best_idx = int(np.argmax(sims))
+            best_sim = float(sims[best_idx])
+
+            if best_sim > max_similarity:
+                max_similarity = best_sim
+                top_match = {
+                    "phrase": phrase[:60],
+                    "matched": self.attacks[best_idx][:60],
+                    "similarity": round(best_sim, 3)
+                }
 
         return {
             "score": round(max_similarity, 3),
