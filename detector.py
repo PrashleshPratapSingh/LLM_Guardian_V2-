@@ -141,9 +141,9 @@ class LLMGuardian:
             0.40 * p3["score"]
         ), 4)
 
-        if risk_score > 0.7:
+        if risk_score >= 0.45:
             verdict = "BLOCK"
-        elif risk_score < 0.3:
+        elif risk_score < 0.2:
             verdict = "ALLOW"
         else:
             verdict = "REVIEW"

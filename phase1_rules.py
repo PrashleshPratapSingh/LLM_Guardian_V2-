@@ -19,8 +19,8 @@ class Phase1Rules:
                 matches.append(rule["name"])
                 total_risk += rule["risk"]
 
-        # Normalize: if multiple rules match, cap at 1.0
-        score = min(1.0, total_risk / max(1, len(matches))) if matches else 0.0
+        # Use highest-risk match, boosted slightly for each additional match
+        score = min(1.0, total_risk * (1 + 0.15 * (len(matches) - 1))) if matches else 0.0
 
         return {
             "score": round(score, 3),

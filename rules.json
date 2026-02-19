@@ -1,5 +1,35 @@
 [
   {
+    "pattern": "act (as|like) (a |an )?(hacker|criminal|attacker|thief|cracker|black hat|malicious)",
+    "risk": 1.0,
+    "name": "Hacker Impersonation"
+  },
+  {
+    "pattern": "give (me|us).*(password|credential|secret|access key|api key|token|login)",
+    "risk": 1.0,
+    "name": "Credential Theft"
+  },
+  {
+    "pattern": "(hack|breach|compromise|crack).*(server|system|database|account|network|website)",
+    "risk": 1.0,
+    "name": "Hacking Request"
+  },
+  {
+    "pattern": "(how (to|do i)|teach me|show me|help me).*(hack|steal|phish|bypass|exploit|crack|break into)",
+    "risk": 0.9,
+    "name": "Attack Tutorial"
+  },
+  {
+    "pattern": "(pretend|act|behave|roleplay|play).*(you have no|you are|without any).*(limit|filter|rule|restriction|safety)",
+    "risk": 1.0,
+    "name": "Unrestricted Roleplay"
+  },
+  {
+    "pattern": "(steal|exfiltrate|leak|dump|extract).*(data|information|passwords?|keys?|database|user)",
+    "risk": 1.0,
+    "name": "Data Exfiltration"
+  },
+  {
     "pattern": "ignore.*(instructions?|rules?|previous|prior|all)",
     "risk": 1.0,
     "name": "Direct Override"
