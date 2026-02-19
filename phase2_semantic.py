@@ -11,26 +11,14 @@ class Phase2Semantic:
         self.embedding_func = embedding_functions.SentenceTransformerEmbeddingFunction(
             model_name="all-MiniLM-L6-v2"
         )
-        self.client = chromadb.PersistentClient(path=CHROMA_PATH)
-
-        # Get or create collection
-        existing = [c.name for c in self.client.list_collections()]
-        if COLLECTION_NAME in existing:
-            self.collection = self.client.get_collection(
-                name=COLLECTION_NAME,
-                embedding_function=self.embedding_func
-            )
-        else:
-            self.collection = self.client.create_collection(
-                name=COLLECTION_NAME,
-                embedding_function=self.embedding_func,
-                metadata={"hnsw:space": "cosine"}
-            )
-            self._load_attacks()
-
-        # If collection is empty, reload
-        if self.collection.count() == 0:
-            self._load_attacks()
+        # EphemeralClient = in-memory, no folder needed — works on Streamlit Cloud
+        self.client = chromadb.EphemeralClient()
+        self.collection = self.client.create_collection(
+            name=COLLECTION_NAME,
+            embedding_function=self.embedding_func,
+            metadata={"hnsw:space": "cosine"}
+        )
+        self._load_attacks()
 
     def _load_attacks(self):
         with open(ATTACKS_FILE, "r", encoding="utf-8") as f:
